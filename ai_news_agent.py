@@ -76,9 +76,13 @@ async def do_search(query: str, max_results: int):
     current_date = datetime.date.today()
     date_string = current_date.strftime("%Y-%m-%d")
     deps = SearchDataclass(max_results=max_results, todays_date=date_string)
-    result = await search_agent.run(query, deps=deps)
-    logger.debug(f"Search agent result: {result}")
-    return result
+    try:
+        result = await search_agent.run(query, deps=deps)
+        logger.debug(f"Search agent result: {result}")
+        return result
+    except Exception as e:
+        logger.error(f"Error during search: {e}")
+        return None
 
 st.set_page_config(page_title = "AI News Researcher", page_icon = "🔍", layout = 'centered')
 st.title("LLM News Researcher")
@@ -123,7 +127,10 @@ def display_research_result(research_result: ResearchResult) -> None:
         unsafe_allow_html=True
     )
     st.markdown("### Key Takeaways")
-    st.markdown(research_result.research_bullets)
+    bullet_points = research_result.research_bullets.strip().split("\\n")
+    for point in bullet_points:
+        if point.strip():
+            st.markdown(f"- {point.strip()}")
 
 if st.button("Get latest Large Language Model news"):
     with st.spinner("Searching for latest news..."):
@@ -131,4 +138,7 @@ if st.button("Get latest Large Language Model news"):
     
     logger.debug(f"Final result_data: {result_data}")
     
-    handle_result_data(result_data)
+    if result_data is None:
+        st.error("An error occurred during the search. Please try again.")
+    else:
+        handle_result_data(result_data)
